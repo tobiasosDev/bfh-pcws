@@ -4,6 +4,7 @@ import ch.bfh.pcws.log.DataLogEntry;
 import ch.bfh.pcws.log.DataLogService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.cloud.storage.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +43,18 @@ public class FileDataLogServiceImpl implements DataLogService {
     }
 
     private void writeDatalogEntryFile(DataLogEntry dataLogEntry) throws JsonProcessingException, FileNotFoundException {
+        Storage storage = StorageOptions.getDefaultInstance().getService();
+
         String datalogEntryJson = objectMapper.writeValueAsString(dataLogEntry);
         String fileName = UUID.randomUUID().toString() + ".json";
+        String bucketName = "pcws-log-bucket"; // Your bucket name
 
-        File file = new File(datalogDirectory, fileName);
-        try(PrintWriter out = new PrintWriter(file)) {
-            out.println(datalogEntryJson);
-        }
+        BlobId blobId = BlobId.of(bucketName, fileName);
+        BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType("text/plain").build();
+
+        // Write the file
+        Blob blob = storage.create(blobInfo, datalogEntryJson.getBytes());
+
+        System.out.println("File written successfully!");
     }
 }
