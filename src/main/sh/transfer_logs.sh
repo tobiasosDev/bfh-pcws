@@ -1,7 +1,7 @@
 #!/bin/sh
 
 readonly DATALOG_SERVICE_URL=${PCWS_DATALOG_SERVICE_URL:-'https://bfh-paketblitz-datalog-service.herokuapp.com'}
-readonly DATALOG_DIRECTORY=${PCWS_DATALOG_DIRECTORY:-'/datalogDirectory'}
+readonly DATALOG_DIRECTORY=${PCWS_DATALOG_DIRECTORY:-'.'}
 
 function transfer_log() {
   local log_file=$1
@@ -18,16 +18,29 @@ function transfer_log() {
 
 function transfer_logs() {
   local log_directory=$1
+  gsutil ls gs://pcws-log-bucket
+  for google_file in gsutil ls gs://pcws-log-bucket; do
+    gsutil cp ${google_file} ${log_directory}
+    gsutil rm ${google_file}
+  done
   for log_file in ${log_directory}/*.json; do
     transfer_log ${log_file}
   done
 }
 
+function init_transfer() {
+    local log_directory=${DATALOG_DIRECTORY}
+    echo "Starting datalog transfer from ${log_directory}"
+    transfer_logs ${log_directory}
+    echo "Finished datalog transfer from ${log_directory}"
+}
+
 function main() {
-  local log_directory=${DATALOG_DIRECTORY}
-  echo "Starting datalog transfer from ${log_directory}"
-  transfer_logs ${log_directory}
-  echo "Finished datalog transfer from ${log_directory}"
+  # run init_transfer every minute
+  while true; do
+    init_transfer
+    sleep 60
+  done
 }
 
 main $@
